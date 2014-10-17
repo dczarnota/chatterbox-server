@@ -4,8 +4,9 @@
  * You'll have to figure out a way to export this function from
  * this file and include it in basic-server.js so that it actually works.
  * *Hint* Check out the node module documentation at http://nodejs.org/api/modules.html. */
+var storedMessages = {results: []};
 
-var handleRequest = function(request, response) {
+exports.handler = function(request, response) {
   /* the 'request' argument comes from nodes http module. It includes info about the
   request - such as what URL the browser is requesting. */
 
@@ -14,7 +15,14 @@ var handleRequest = function(request, response) {
 
   console.log("Serving request type " + request.method + " for url " + request.url);
 
-  var statusCode = 200;
+
+  // var urlPath = url.pathname()
+
+  if(request.url.slice(0, 8) !== '/classes'){
+    var statusCode = 404;
+  } else {
+    var statusCode;
+  }
 
   /* Without this line, this server wouldn't work. See the note
    * below about CORS. */
@@ -23,13 +31,43 @@ var handleRequest = function(request, response) {
   headers['Content-Type'] = "text/plain";
 
   /* .writeHead() tells our server what HTTP status code to send back */
-  response.writeHead(statusCode, headers);
+  // response.writeHead(statusCode, headers);
 
   /* Make sure to always call response.end() - Node will not send
    * anything back to the client until you do. The string you pass to
    * response.end() will be the body of the response - i.e. what shows
    * up in the browser.*/
-  response.end("Hello, World!");
+  switch(request.method) {
+
+    case 'GET':
+      statusCode = statusCode ? statusCode : 200;
+      response.writeHead(statusCode, headers);
+      response.end(JSON.stringify(storedMessages));
+      break;
+
+    case 'POST':
+      var body = '';
+
+      request.setEncoding('utf8');
+      request.on('data', function(chunk) {
+        body += chunk;
+      });
+
+      request.on('end', function() {
+        var parsedData = JSON.parse(body);
+        storedMessages.results.push(parsedData);
+        statusCode = statusCode ? statusCode : 201;
+        response.writeHead(statusCode, headers);
+        response.end(JSON.stringify(storedMessages));
+      });
+      break;
+
+    default:
+      response.writeHead(statusCode, headers);
+      statusCode = 400;
+      response.end('error you dope');
+  }
+
 };
 
 /* These headers will allow Cross-Origin Resource Sharing (CORS).
